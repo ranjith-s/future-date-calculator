@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Future Age Calculator</title>
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Styling for the flatpickr calendar to match the theme */
+        .flatpickr-calendar {
+            font-family: 'Inter', sans-serif;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        .flatpickr-day.selected {
+            background: #4f46e5;
+            border-color: #4f46e5;
+        }
+        .flatpickr-day.today {
+            border-color: #4f46e5;
+        }
+        .flatpickr-day:hover {
+            background: #e0e7ff;
+        }
+        /* Custom styles for the range slider thumb */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -6px;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Future Age Calculator</h1>
+            <p class="text-gray-500 mt-2">Calculate ages at a specific future date.</p>
+        </div>
+
+        <!-- Inputs Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Person A Input - Changed to type="text" for flatpickr -->
+            <div class="space-y-2">
+                <label for="dobA" class="text-sm font-medium text-gray-700">Person A's Date of Birth</label>
+                <input type="text" id="dobA" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <!-- Person B Input - Changed to type="text" for flatpickr -->
+            <div class="space-y-2">
+                <label for="dobB" class="text-sm font-medium text-gray-700">Person B's Date of Birth</label>
+                <input type="text" id="dobB" placeholder="DD/MM/YYYY" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+        </div>
+
+        <!-- Slider Section -->
+        <div class="mb-8">
+            <label for="durationSlider" class="text-sm font-medium text-gray-700">Expected time it takes for the event from September 15, 2025</label>
+            <div class="flex items-center gap-4 mt-2">
+                <!-- UPDATED: max value changed from 3 to 4 -->
+                <input type="range" id="durationSlider" min="0.25" max="4" step="0.25" value="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                <span id="sliderValue" class="font-semibold text-indigo-600 w-28 text-center bg-indigo-50 py-1 rounded-md">1.00 years</span>
+            </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Calculated Results</h2>
+            <div class="space-y-4">
+                <!-- Calculated Date -->
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center">
+                    <span class="font-medium text-gray-600 mb-1 sm:mb-0">Follow-up Event Date X (above event + 6 months):</span>
+                    <span id="futureDate" class="font-bold text-lg text-gray-900">--</span>
+                </div>
+                <hr>
+                <!-- Person A's Future Age -->
+                <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-600">Person A's Age at Date X:</span>
+                    <span id="ageA" class="font-bold text-lg text-green-600">--</span>
+                </div>
+                <!-- Person B's Future Age -->
+                <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-600">Person B's Age at Date X:</span>
+                    <span id="ageB" class="font-bold text-lg text-blue-600">--</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // DOM Element References
+        const durationSlider = document.getElementById('durationSlider');
+        const sliderValueDisplay = document.getElementById('sliderValue');
+        const futureDateDisplay = document.getElementById('futureDate');
+        const ageADisplay = document.getElementById('ageA');
+        const ageBDisplay = document.getElementById('ageB');
+
+        // Base date for calculation
+        const BASE_DATE = new Date('2025-09-15T00:00:00');
+
+        // Hold flatpickr instances
+        let dobA_fp, dobB_fp;
+
+        /**
+         * Formats the slider value for display.
+         */
+        function formatSliderValue(value) {
+            if (value < 1) {
+                const months = value * 12;
+                return `${months} ${months === 1 ? 'month' : 'months'}`;
+            } else if (value === 1) {
+                return `1 year`;
+            } else {
+                return `${value.toFixed(2)} years`;
+            }
+        }
+
+        /**
+         * Calculates the age of a person.
+         */
+        function calculateAge(dob, futureDate) {
+            if (!dob || isNaN(dob)) {
+                return '--';
+            }
+
+            let years = futureDate.getFullYear() - dob.getFullYear();
+            let months = futureDate.getMonth() - dob.getMonth();
+            let days = futureDate.getDate() - dob.getDate();
+
+            if (days < 0) {
+                months--;
+                const lastMonth = new Date(futureDate.getFullYear(), futureDate.getMonth(), 0);
+                days += lastMonth.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+            
+            if (years < 0) {
+                return 'Not born yet';
+            }
+
+            return `${years}y, ${months}m, ${days}d`;
+        }
+
+        /**
+         * Main function to perform all calculations and update the UI.
+         */
+        function updateCalculations() {
+            const sliderYears = parseFloat(durationSlider.value);
+            
+            sliderValueDisplay.textContent = formatSliderValue(sliderYears);
+
+            const monthsFromSlider = sliderYears * 12;
+            const totalMonthsToAdd = monthsFromSlider + 6;
+
+            const futureDate = new Date(BASE_DATE);
+            futureDate.setMonth(futureDate.getMonth() + totalMonthsToAdd);
+            
+            const day = String(futureDate.getDate()).padStart(2, '0');
+            const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+            const year = futureDate.getFullYear();
+            futureDateDisplay.textContent = `${day}/${month}/${year}`;
+
+            // Get DOBs directly from flatpickr instances
+            const dobA = dobA_fp.selectedDates[0];
+            const dobB = dobB_fp.selectedDates[0];
+
+            ageADisplay.textContent = calculateAge(dobA, futureDate);
+            ageBDisplay.textContent = calculateAge(dobB, futureDate);
+        }
+
+        // Event Listeners
+        durationSlider.addEventListener('input', updateCalculations);
+
+        // Initial calculation on page load
+        window.onload = () => {
+            // Configuration for the date pickers
+            const flatpickrConfig = {
+                dateFormat: "d/m/Y", // Set the DD/MM/YYYY format
+                onChange: updateCalculations // Recalculate whenever a date is changed
+            };
+
+            // Initialize flatpickr on the text inputs
+            dobA_fp = flatpickr("#dobA", flatpickrConfig);
+            dobB_fp = flatpickr("#dobB", flatpickrConfig);
+
+            // Set default dates for demonstration using the correct format
+            dobA_fp.setDate('20/05/1990');
+            dobB_fp.setDate('10/11/1992');
+            
+            // Run initial calculation
+            updateCalculations();
+        };
+
+    </script>
+</body>
+</html>
